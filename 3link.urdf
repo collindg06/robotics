@@ -68,7 +68,7 @@
   </link>
 
   
-  <joint name="joint_1" type="continuous">
+  <joint name="joint1" type="continuous">
     <parent link="link1"/>
     <child link="link2"/>
     <origin rpy="0 0 0" xyz="0 .1 0"/>
@@ -76,9 +76,9 @@
     <limit effort="1000.0" lower="-3.141592653589793" upper="3.141592653589793" velocity="2.5"/>
   </joint>
   
-  <joint name="joint_2" type="continuous">
-    <parent link="link_2"/>
-    <child link="link_3"/>
+  <joint name="joint2" type="continuous">
+    <parent link="link2"/>
+    <child link="link3"/>
     <origin rpy="0 0 0" xyz="0.3536 0.3536 0.25"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="-3.141592653589793" upper="3.141592653589793" velocity="2.5"/>
