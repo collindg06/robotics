@@ -55,8 +55,8 @@
       <geometry>
         <cylinder length="0.5" radius="0.1"/>
       </geometry>
-      <material name="yellow">
-        <color rgba="1 1 0 1"/>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
       </material>
     </visual>
     <collision>
