@@ -79,7 +79,7 @@
   <joint name="joint2" type="fixed">
     <parent link="link2"/>
     <child link="link3"/>
-    <origin rpy="0 0 0" xyz="0 .2 .6"/>
+    <origin rpy="0 0 0" xyz="0 .1 .5"/>
   </joint>
 </robot>
 
