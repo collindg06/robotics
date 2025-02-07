@@ -76,7 +76,7 @@
     <limit effort="1000.0" lower="-3.141592653589793" upper="3.141592653589793" velocity="2.5"/>
   </joint>
   
-  <joint name="joint2" type="fixed">
+  <joint name="joint2" type="continious">
     <parent link="link2"/>
     <child link="link3"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
