@@ -159,7 +159,7 @@ class SimpleStack(BaseSample):
                 self.pose_flag=True
             if self.handmode == 'a' and event.input.name == "M":
                 self.multiple = True
-                self.arm_off=[1.5,1.25,-1.25,0.,0., 0.]
+                self.arm_off=[1.4,1.25,-1.65,0.,0., 0.]
                 self.pose_flag=True
             if self.handmode == 'o' and event.input.name == "U":
                 self.hand_off[self.f_indx]= 0.05
@@ -228,7 +228,7 @@ class SimpleStack(BaseSample):
             if self.handmode=='i':#finger
                 actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
             if self.handmode=='a' and self.multiple == True :#arm joints
-                actions.joint_positions +=self.arm_off
+                actions.joint_positions =  (actions.joint_positions * 0) + self.arm_off
                 self.multiple = False
             elif self.handmode=='a':#arm joints
                 actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
