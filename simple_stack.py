@@ -40,7 +40,7 @@ class UR10Playing(BaseTask):
         scene.add_default_ground_plane()
         self._cube = scene.add(DynamicCuboid(prim_path="/World/random_cube",
                                             name="fancy_cube",
-                                            position=np.array([0.3, 0.3, 0.3]),
+                                            position=np.array([0.5, 0.5, 0.4]),
                                             scale=np.array([0.0415, 0.0415, 0.0415]),
                                             color=np.array([0, 0, 1.0])))
         self._cube2 = scene.add(DynamicCuboid(prim_path="/World/ref_cube",
@@ -91,6 +91,7 @@ class SimpleStack(BaseSample):
         self.f_indx=1
         self.handmode='i'
         self.multiple = False
+        self.x = [0,0,0,0,0,0]
         self.action_enable=True
         self.websocket=False
         self._appwindow = omni.appwindow.get_default_app_window()
@@ -147,6 +148,10 @@ class SimpleStack(BaseSample):
                 print(f"zzz websocket = {self.websocket}")
             if self.handmode == 'i' and event.input.name == "U":
                 self.finger_off[self.f_indx]= 0.05
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "M":
+                self.multiple = True
+                self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "J":
                 self.finger_off[self.f_indx]= -0.05
@@ -225,14 +230,21 @@ class SimpleStack(BaseSample):
         if self.pose_flag and not self.handmode=='o':
             #self.hand_off[self.f_indx]+= 0.05
             self.pose_flag=False
-            if self.handmode=='i':#finger
+            if self.handmode=='i' and self.multiple == True :#arm joints
+                actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
+                self.arm_off = self.arm_off[0:6]
+                self.multiple = False
+                #self.finger_off[0:6] = self.arm_off[7:12]
+            elif self.handmode=='i':#finger
                 actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
             if self.handmode=='a' and self.multiple == True :#arm joints
-                actions.joint_positions =  (actions.joint_positions * 0) + self.arm_off
+                actions.joint_positions[0:6] =  (actions.joint_positions[0:6] * 0) + self.arm_off
                 self.multiple = False
             elif self.handmode=='a':#arm joints
                 actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
+                self.x[self.f_indx] += self.arm_off[self.f_indx]
             self._articulation_controller.apply_action(actions)
+            print(self.x)
             print("yyyxxx actions ", actions)
 
         if self.handmode=='o' and self.pose_flag: #IK, end_effort
