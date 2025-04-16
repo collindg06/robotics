@@ -127,7 +127,7 @@ class SimpleStack(BaseSample):
             if event.input.name == "KEY_7": #hand orientation rot x
                 self.f_indx=7
             if event.input.name == "KEY_8": #hand orientation rot y
-                self.f_indx=8
+                self.f_indx=9
             if event.input.name == "KEY_9":
                 #reset all to 0
                 for i in range(6):
