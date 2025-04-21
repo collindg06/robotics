@@ -22,7 +22,10 @@ from omni.isaac.core.utils.stage import add_reference_to_stage, get_stage_units
 import asyncio
 import json
 import websockets
-
+ext_manager = omni.kit.app.get_app().get_extension_manager()
+ext_id = ext_manager.get_extension_id_by_module(__name__)
+ext_path = ext_manager.get_extension_path(ext_id)
+print('ext path', ext_path)
 print('xxxxx torch ', torch.__version__)
 
 #sys.path.append("/home/student/Documents/IsaacLab/source/extensions/omni.isaac.lab")
@@ -37,11 +40,16 @@ class UR10Playing(BaseTask):
         return
     def set_up_scene(self, scene):
         super().set_up_scene(scene)
+
+        ext_manager = omni.kit.app.get_app().get_extension_manager()
+        ext_id = ext_manager.get_extension_id_by_module(__name__)
+        ext_path = ext_manager.get_extension_path(ext_id)
+        print('ext path', ext_path)        
         scene.add_default_ground_plane()
         self._cube = scene.add(DynamicCuboid(prim_path="/World/random_cube",
                                             name="fancy_cube",
-                                            position=np.array([0.5, 0.5, 0.4]),
-                                            scale=np.array([0.0415, 0.0415, 0.0415]),
+                                            position=np.array([0.55, 0.5, 0.4]),
+                                            scale=np.array([0.03, 0.03, 0.0415]),
                                             color=np.array([0, 0, 1.0])))
         self._cube2 = scene.add(DynamicCuboid(prim_path="/World/ref_cube",
                                             name="ref_cube",
@@ -167,12 +175,16 @@ class SimpleStack(BaseSample):
                 self.arm_off=[1.4,1.25,-1.65,0.,0., 0.]
                 self.pose_flag=True
             if self.handmode == 'o' and event.input.name == "U":
+                self.hand_off [0] = 0.0
+                self.hand_off [1] = 0.0
+                self.hand_off [2] = 0.0
                 self.hand_off[self.f_indx]= 0.05
                 self.pose_flag=True
             if self.handmode == 'o' and event.input.name == "MINUS":
                 self.hand_off[self.f_indx]= 0.0
                 self.pose_flag=True
             if self.handmode == 'o' and event.input.name == "J":
+                self.hand_off = [0.0, 0.0, 0.0]
                 self.hand_off[self.f_indx]= -0.05
                 self.pose_flag=True
         return True
