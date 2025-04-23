@@ -48,7 +48,7 @@ class UR10Playing(BaseTask):
         scene.add_default_ground_plane()
         self._cube = scene.add(DynamicCuboid(prim_path="/World/random_cube",
                                             name="fancy_cube",
-                                            position=np.array([0.55, 0.5, 0.4]),
+                                            position=np.array([0.50, 0.5, 0.4]),
                                             scale=np.array([0.03, 0.03, 0.0415]),
                                             color=np.array([0, 0, 1.0])))
         self._cube2 = scene.add(DynamicCuboid(prim_path="/World/ref_cube",
@@ -99,6 +99,7 @@ class SimpleStack(BaseSample):
         self.f_indx=1
         self.handmode='i'
         self.multiple = False
+        self.multiplem = False
         self.x = [0,0,0,0,0,0]
         self.action_enable=True
         self.websocket=False
@@ -160,6 +161,29 @@ class SimpleStack(BaseSample):
             if self.handmode == 'i' and event.input.name == "M":
                 self.multiple = True
                 self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "N":
+                #self.arm_off[1]= -.55
+                #self.pose_flag=True
+                self.multiplem = True
+                self.arm_off=[0, -0.35, 0.4, -0.8, -0.05, -1.45, -1,0,0,0,1,0]
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "S":
+                #self.arm_off[1]= -.55
+                #self.pose_flag=True
+                self.multiplem = True
+                self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "T":
+                #self.arm_off[1]= -.55
+                #self.pose_flag=True
+                self.multiplem = True
+                self.finger_off[9]= .35
+                self.pose_flag=True
+                self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.30,0]
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "R":
+                self.finger_off[9]= .35
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "J":
                 self.finger_off[self.f_indx]= -0.05
@@ -242,6 +266,9 @@ class SimpleStack(BaseSample):
         if self.pose_flag and not self.handmode=='o':
             #self.hand_off[self.f_indx]+= 0.05
             self.pose_flag=False
+            if self.handmode=='i' and self.multiplem == True :#arm joints
+                actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                self.multiplem = False
             if self.handmode=='i' and self.multiple == True :#arm joints
                 actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                 self.arm_off = self.arm_off[0:6]
@@ -256,7 +283,7 @@ class SimpleStack(BaseSample):
                 actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
                 self.x[self.f_indx] += self.arm_off[self.f_indx]
             self._articulation_controller.apply_action(actions)
-            print(self.x)
+            print("Mine: ", self.x)
             print("yyyxxx actions ", actions)
 
         if self.handmode=='o' and self.pose_flag: #IK, end_effort
