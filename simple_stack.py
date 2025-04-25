@@ -22,6 +22,7 @@ from omni.isaac.core.utils.stage import add_reference_to_stage, get_stage_units
 import asyncio
 import json
 import websockets
+import time
 ext_manager = omni.kit.app.get_app().get_extension_manager()
 ext_id = ext_manager.get_extension_id_by_module(__name__)
 ext_path = ext_manager.get_extension_path(ext_id)
@@ -100,6 +101,7 @@ class SimpleStack(BaseSample):
         self.handmode='i'
         self.multiple = False
         self.multiplem = False
+        self.z = True
         self.x = [0,0,0,0,0,0]
         self.action_enable=True
         self.websocket=False
@@ -155,6 +157,12 @@ class SimpleStack(BaseSample):
             if event.input.name == "P": #send websocket
                 self.websocket= not self.websocket
                 print(f"zzz websocket = {self.websocket}")
+            if event.input.name == "X":
+                self.z = False 
+            if event.input.name == "Z":
+                self.starttime = time.perf_counter()
+                self.z = True
+                self.pose_flag = True
             if self.handmode == 'i' and event.input.name == "U":
                 self.finger_off[self.f_indx]= 0.05
                 self.pose_flag=True
@@ -183,8 +191,10 @@ class SimpleStack(BaseSample):
                 self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.30,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "R":
-                self.finger_off[9]= .35
+                self.f_indx = 9
+                self.finger_off[self.f_indx]= .35
                 self.pose_flag=True
+
             if self.handmode == 'i' and event.input.name == "J":
                 self.finger_off[self.f_indx]= -0.05
                 self.pose_flag=True
@@ -263,13 +273,13 @@ class SimpleStack(BaseSample):
 
         actions = ArticulationAction(joint_positions=np.array([0.0, -0.5, 0.54, 0. , 0.0, 0 , 0., 0., 0., 0., 0., 0., 0., 0.,0., 0., 0., 0.]))
         actions.joint_positions=observations['fancy_franka']['joint_positions']
-        if self.pose_flag and not self.handmode=='o':
+        if self.pose_flag and not self.handmode=='o' and not self.z == True:
             #self.hand_off[self.f_indx]+= 0.05
             self.pose_flag=False
             if self.handmode=='i' and self.multiplem == True :#arm joints
                 actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
                 self.multiplem = False
-            if self.handmode=='i' and self.multiple == True :#arm joints
+            elif self.handmode=='i' and self.multiple == True :#arm joints
                 actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                 self.arm_off = self.arm_off[0:6]
                 self.multiple = False
@@ -285,6 +295,40 @@ class SimpleStack(BaseSample):
             self._articulation_controller.apply_action(actions)
             print("Mine: ", self.x)
             print("yyyxxx actions ", actions)
+        elif self.pose_flag and self.z == True:
+                elapsed = time.perf_counter() - self.starttime
+                if (elapsed > 0 and elapsed < 4):
+                    #self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
+                    self.arm_off=[-.05,-1.1,2.4,-1.4,-.15,-4.75, -.2,0,0,0,2.25,0]
+                    actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
+                    #self.arm_off = self.arm_off[0:6]
+                    self._articulation_controller.apply_action(actions)
+                #elif (elapsed > 5 and elapsed < 5.02):
+                    #pass
+                    #self.arm_off=[0, -0.35, 0.4, -0.8, -0.05, -1.45, -1,0,0,0,1,0]
+                    #actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                    #self._articulation_controller.apply_action(actions)
+                elif(elapsed > 4 and elapsed < 4.02):
+                    self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
+                    actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                    self._articulation_controller.apply_action(actions)
+                elif(elapsed > 7 and elapsed < 7.02):
+                    self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.28,0]
+                    actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                    self._articulation_controller.apply_action(actions)
+                elif(elapsed > 9 and elapsed < 9.02):
+                    self.f_indx = 9
+                    self.finger_off[self.f_indx]= .36
+                    actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
+                    self._articulation_controller.apply_action(actions)
+                elif(elapsed > 11 and elapsed < 11.02):
+                    self.f_indx = 1
+                    self.arm_off[self.f_indx]= -0.1
+                    actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
+                    self._articulation_controller.apply_action(actions)
+                elif (elapsed > 14):
+                    self.z =False
+                    
 
         if self.handmode=='o' and self.pose_flag: #IK, end_effort
             self.pose_flag=False
