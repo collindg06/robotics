@@ -157,9 +157,9 @@ class SimpleStack(BaseSample):
             if event.input.name == "P": #send websocket
                 self.websocket= not self.websocket
                 print(f"zzz websocket = {self.websocket}")
-            if event.input.name == "X":
+            if event.input.name == "X": # stops z
                 self.z = False 
-            if event.input.name == "Z":
+            if event.input.name == "Z": # pick block up
                 self.starttime = time.perf_counter()
                 self.z = True
                 self.pose_flag = True
@@ -171,30 +171,21 @@ class SimpleStack(BaseSample):
                 self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "N":
-                #self.arm_off[1]= -.55
-                #self.pose_flag=True
                 self.multiplem = True
                 self.arm_off=[0, -0.35, 0.4, -0.8, -0.05, -1.45, -1,0,0,0,1,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "S":
-                #self.arm_off[1]= -.55
-                #self.pose_flag=True
                 self.multiplem = True
                 self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "T":
-                #self.arm_off[1]= -.55
-                #self.pose_flag=True
                 self.multiplem = True
-                self.finger_off[9]= .35
-                self.pose_flag=True
                 self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.30,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "R":
                 self.f_indx = 9
                 self.finger_off[self.f_indx]= .35
                 self.pose_flag=True
-
             if self.handmode == 'i' and event.input.name == "J":
                 self.finger_off[self.f_indx]= -0.05
                 self.pose_flag=True
