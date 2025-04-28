@@ -101,7 +101,7 @@ class SimpleStack(BaseSample):
         self.handmode='i'
         self.multiple = False
         self.multiplem = False
-        self.z = True
+        self.z = False
         self.x = [0,0,0,0,0,0]
         self.action_enable=True
         self.websocket=False
