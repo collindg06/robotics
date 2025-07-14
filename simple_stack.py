@@ -294,11 +294,6 @@ class SimpleStack(BaseSample):
                     actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                     #self.arm_off = self.arm_off[0:6]
                     self._articulation_controller.apply_action(actions)
-                #elif (elapsed > 5 and elapsed < 5.02):
-                    #pass
-                    #self.arm_off=[0, -0.35, 0.4, -0.8, -0.05, -1.45, -1,0,0,0,1,0]
-                    #actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
-                    #self._articulation_controller.apply_action(actions)
                 elif(elapsed > 4 and elapsed < 4.02):
                     self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
                     actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
