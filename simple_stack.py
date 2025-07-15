@@ -8,6 +8,11 @@ from .ur10ext import BaseSample
 from omni.isaac.ur10hand.controllers.stacking_controller import StackingController
 import numpy as np
 from omni.isaac.core.objects import DynamicCuboid
+from omni.isaac.core.objects import DynamicCylinder
+from omni.isaac.core.objects import DynamicCapsule
+import omni.usd
+from pxr import UsdPhysics, UsdGeom
+from pxr import UsdPhysics
 from omni.isaac.ur10hand import UR10 
 from omni.isaac.franka import Franka 
 from omni.isaac.core.utils.types import ArticulationAction
@@ -47,11 +52,52 @@ class UR10Playing(BaseTask):
         ext_path = ext_manager.get_extension_path(ext_id)
         print('ext path', ext_path)        
         scene.add_default_ground_plane()
+        '''
+        self._cylinder = scene.add(DynamicCylinder(prim_path="/World/red_cylinder",
+                                            name="red_cylinder",
+                                            position=np.array([0.55, 0.5, 0.45]),
+                                            scale=np.array([0.02, 0.02, 0.1]),
+                                            color=np.array([1.0, 0.0, 0.0])))
+        
+        stage = omni.usd.get_context().get_stage()
+        prim_path = "/World/red_cylinder"
+        prim = stage.GetPrimAtPath(prim_path)
+
+        if not prim.IsValid():
+            raise RuntimeError(f"Prim at {prim_path} not found!")
+
+        # Apply Collision API to the main cylinder prim if not already present
+        if not prim.HasAPI(UsdPhysics.CollisionAPI):
+            UsdPhysics.CollisionAPI.Apply(prim)
+
+        #(Advanced) Create a child prim under it to act as the physics shape
+        collision_prim_path = f"{prim_path}/PhysicsShape_Collision"
+
+        # Define a Cylinder as the explicit physics shape
+        collision_prim = stage.DefinePrim(collision_prim_path, "Cylinder")
+
+        #  Set radius and height (match your visual shape)
+        cylinder_geom = UsdGeom.Cylinder(collision_prim)
+
+        # Optionally customize the collider size (match your visual model scale)
+        cylinder_geom.CreateRadiusAttr(0.02)  # Match your DynamicCylinder radius
+        cylinder_geom.CreateHeightAttr(0.1)   # Match your DynamicCylinder height
+
+        
+        self._capsule = scene.add(DynamicCapsule(prim_path="/World/my_dynamic_capsule",
+                                            name="my_dynamic_capsule",
+                                            position=np.array([0.5, 0.5, 0.45]),  # XYZ position (meters)
+                                            scale=np.array([0.02, 0.02, 0.1]),   # X/Y = radius, Z = half-height
+                                            color=np.array([0.8, 0.2, 0.2])))
+        '''
+        # Add 2 cubes to scene
         self._cube = scene.add(DynamicCuboid(prim_path="/World/random_cube",
                                             name="fancy_cube",
-                                            position=np.array([0.50, 0.5, 0.4]),
+                                            position=np.array([0.5, 0.5, 0.4]),
+                                            orientation=np.array([0.96592584,0., 0., 0.25881901]),
                                             scale=np.array([0.03, 0.03, 0.0415]),
                                             color=np.array([0, 0, 1.0])))
+        
         self._cube2 = scene.add(DynamicCuboid(prim_path="/World/ref_cube",
                                             name="ref_cube",
                                             position=np.array([0.1, 0.1, 0.1]),
@@ -59,7 +105,7 @@ class UR10Playing(BaseTask):
                                             scale=np.array([0.0415, 0.0415, 0.0415]),
                                             color=np.array([0, 1.0, .0])))
         #exts/omni.isaac.universal_robots/omni/isaac/universal_robots/tasks/bin_filling.py
-        self._ur10_asset_path = r"C:\Users\CS Student 2\Documents\tang\VisionRobot\isaac_example\ur10_bin_filling2.usd"
+        self._ur10_asset_path = "C:\\isaac-sim\\exts\\ur10hand_demo.ur10ext\\config\\ur10_bin_filling2.usd"
         add_reference_to_stage(usd_path=self._ur10_asset_path, prim_path="/World/Scene")
         self._franka = scene.add(UR10(prim_path="/World/Scene/ur10",
                                         name="fancy_franka",
@@ -103,6 +149,8 @@ class SimpleStack(BaseSample):
         self.multiplem = False
         self.z = False
         self.x = [0,0,0,0,0,0]
+        self.limit_thumb = 0
+        self.limiter = 0
         self.action_enable=True
         self.websocket=False
         self._appwindow = omni.appwindow.get_default_app_window()
@@ -137,7 +185,7 @@ class SimpleStack(BaseSample):
                 self.f_indx=5
             if event.input.name == "KEY_7": #hand orientation rot x
                 self.f_indx=7
-            if event.input.name == "KEY_8": #hand orientation rot y
+            if event.input.name == "KEY_8": #hand orientation rot y 
                 self.f_indx=9
             if event.input.name == "KEY_9":
                 #reset all to 0
@@ -151,47 +199,81 @@ class SimpleStack(BaseSample):
                 self.handmode='a'
             if event.input.name == "D":
                 self.dbg=True
-            if event.input.name == "T": #toggle apply action or not
+            if event.input.name == "C": #toggle apply action or not
                 self.action_enable= not self.action_enable
                 print(f"zzz action_enable = {self.action_enable}")
             if event.input.name == "P": #send websocket
                 self.websocket= not self.websocket
                 print(f"zzz websocket = {self.websocket}")
-            if event.input.name == "X": # stops z
+            # Stop Z
+            if event.input.name == "X":
                 self.z = False 
-            if event.input.name == "Z": # pick block up
+            # Pick block up
+            if event.input.name == "Z":
                 self.starttime = time.perf_counter()
                 self.z = True
                 self.pose_flag = True
+            # Small addition to finger index of choice
             if self.handmode == 'i' and event.input.name == "U":
                 self.finger_off[self.f_indx]= 0.05
                 self.pose_flag=True
+            # Small subtraction to finger index of choice
+            if self.handmode == 'i' and event.input.name == "J":
+                self.finger_off[self.f_indx]= -0.05
+                self.pose_flag=True
+            if self.handmode == 'i' and event.input.name == "B":
+                self.multiple = True
+                self.arm_off= [-0.05, -0.9, 2, -.9, 0.05, -1.95, 0,0,0,0,0,0]
+                self.pose_flag=True
+            # Hover in front of block    
             if self.handmode == 'i' and event.input.name == "M":
                 self.multiple = True
-                self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
+                self.arm_off=[-.05,-1,2,-.6,-.1,-3.3,   0,0,0,0,0,0]
                 self.pose_flag=True
             if self.handmode == 'i' and event.input.name == "N":
                 self.multiplem = True
                 self.arm_off=[0, -0.35, 0.4, -0.8, -0.05, -1.45, -1,0,0,0,1,0]
                 self.pose_flag=True
-            if self.handmode == 'i' and event.input.name == "S":
-                self.multiplem = True
-                self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
+            if self.handmode == 'i' and event.input.name == "L":
+                self.multiple = True
+                self.arm_off=[.25, -.95, 2.1, -1.05,.2, -3.5,   0,0,0.15,0,0,0 ]
                 self.pose_flag=True
+            # Close fingers
+            if self.handmode == 'i' and event.input.name == "Y":
+                if self.limit_thumb <= .30 :
+                    self.multiplem = True
+                    self.arm_off= [ 0, 0, 0, 0, 0, 0 ,   0,0,.05,.05,0,0]
+                    self.pose_flag=True
+                else:
+                    print("past limit")
+            # Open fingers
+            if self.handmode == 'i' and event.input.name == "K":
+                if self.limit_thumb >= .05:
+                    self.multiplem = True
+                    self.arm_off= [ 0, 0, 0, 0, 0, 0 ,  0,0,-.05,-.05,0,0]
+                    self.pose_flag=True
+                else:
+                    print("past limit")
+            # Hover over block
+            if self.handmode == 'i' and event.input.name == "Q":
+                self.multiple = True
+                self.arm_off=[.25, -.95, 2.1, -.8,.15, -3.25,   0,0,0.15,0,0,0 ]
+                self.pose_flag=True
+            # Grab block
+            if self.handmode == 'i' and event.input.name == "S":
+                self.multiple = True
+                self.arm_off=[.25, -.95, 2.1, -.8,.15, -3.25,   0,0,0.38,0.15,0,0 ]
+                self.pose_flag=True
+            # Lift arm up
             if self.handmode == 'i' and event.input.name == "T":
                 self.multiplem = True
-                self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.30,0]
+                self.arm_off= [ 0, -.1, 0, 0, 0, 0 ,0,0,0,0,0,0]
                 self.pose_flag=True
-            if self.handmode == 'i' and event.input.name == "R":
-                self.f_indx = 9
-                self.finger_off[self.f_indx]= .35
-                self.pose_flag=True
-            if self.handmode == 'i' and event.input.name == "J":
-                self.finger_off[self.f_indx]= -0.05
-                self.pose_flag=True
+            # Small addition to arm index of choice
             if self.handmode == 'a' and event.input.name == "U":
                 self.arm_off[self.f_indx]= 0.05
                 self.pose_flag=True
+            # Small subtraction to arm index of choice
             if self.handmode == 'a' and event.input.name == "J":
                 self.arm_off[self.f_indx]= -0.05
                 self.pose_flag=True
@@ -265,55 +347,72 @@ class SimpleStack(BaseSample):
         actions = ArticulationAction(joint_positions=np.array([0.0, -0.5, 0.54, 0. , 0.0, 0 , 0., 0., 0., 0., 0., 0., 0., 0.,0., 0., 0., 0.]))
         actions.joint_positions=observations['fancy_franka']['joint_positions']
         if self.pose_flag and not self.handmode=='o' and not self.z == True:
-            #self.hand_off[self.f_indx]+= 0.05
             self.pose_flag=False
-            if self.handmode=='i' and self.multiplem == True :#arm joints
+            # Check if moving multiple joints and want to add the changes on top of current position
+            if self.handmode=='i' and self.multiplem == True :
                 actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
                 self.multiplem = False
-            elif self.handmode=='i' and self.multiple == True :#arm joints
+                self.limiter = 2
+            # Check if moving multiple joints 
+            elif self.handmode=='i' and self.multiple == True :
+                self.limiter = 1
                 actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
-                self.arm_off = self.arm_off[0:6]
                 self.multiple = False
-                #self.finger_off[0:6] = self.arm_off[7:12]
+            # If you just want to move 1 finger
             elif self.handmode=='i':#finger
-                actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
-            if self.handmode=='a' and self.multiple == True :#arm joints
+                self.limit_thumb = self.limit_thumb + self.finger_off[self.f_indx]
+                if self.f_indx != 2 :
+                    actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
+                elif (self.limit_thumb >= 0 and self.limit_thumb <= .35):
+                    actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
+                elif (self.limit_thumb < 0):
+                    print("past limit.")
+                    self.limit_thumb = 0
+                elif (self.limit_thumb > .35):
+                    print("past limit")
+                    self.limit_thumb = .35
+            # Check if moving multiple joints 
+            if self.handmode=='a' and self.multiple == True :
                 actions.joint_positions[0:6] =  (actions.joint_positions[0:6] * 0) + self.arm_off
                 self.multiple = False
             elif self.handmode=='a':#arm joints
                 actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
                 self.x[self.f_indx] += self.arm_off[self.f_indx]
+
+            # Apply action to robot
             self._articulation_controller.apply_action(actions)
             print("Mine: ", self.x)
             print("yyyxxx actions ", actions)
+
+            # Updating limiter
+            if self.limiter == 1:
+                self.limit_thumb = self.arm_off[8]
+                self.limiter = 0
+            elif self.limiter == 2:
+                self.limit_thumb = self.limit_thumb + self.arm_off[8]
+                self.limiter = 0
+
+        # Get to different positions every few seconds to pick up block
         elif self.pose_flag and self.z == True:
                 elapsed = time.perf_counter() - self.starttime
-                if (elapsed > 0 and elapsed < 4):
-                    #self.arm_off=[-.05,-.75,2,-.6,-.1,-3.3, .8,0,0,0,1.25,0]
-                    self.arm_off=[-.05,-1.1,2.4,-1.4,-.15,-4.75, -.2,0,0,0,2.25,0]
+                if (elapsed > 0 and elapsed < 3):
+                    self.arm_off=[-.05,-1,2,-.6,-.1,-3.3,   0,0,0,0,0,0]
                     actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
-                    #self.arm_off = self.arm_off[0:6]
                     self._articulation_controller.apply_action(actions)
-                elif(elapsed > 4 and elapsed < 4.02):
-                    self.arm_off= [ 0, 0.25, -0.15, 0, 0, 0.2 ,0,0,0,0,0,0]
-                    actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                elif(elapsed > 3 and elapsed < 5.9):
+                    self.arm_off=[.25, -.95, 2.1, -.8,.15, -3.25,   0,0,0.15,0,0,0 ]
+                    actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                     self._articulation_controller.apply_action(actions)
-                elif(elapsed > 7 and elapsed < 7.02):
-                    self.arm_off= [ 0, 0, 0, 0, 0, 0 ,1.1,0,0,0,-.28,0]
-                    actions.joint_positions[0:12] =  actions.joint_positions[0:12] + self.arm_off
+                elif(elapsed > 6 and elapsed < 8.99):
+                    self.arm_off=[.25, -.95, 2.1, -.8,.15, -3.25,   0,0,0.38,0.15,0,0 ]
+                    actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                     self._articulation_controller.apply_action(actions)
-                elif(elapsed > 9 and elapsed < 9.02):
-                    self.f_indx = 9
-                    self.finger_off[self.f_indx]= .36
-                    actions.joint_positions[self.f_indx+6] +=self.finger_off[self.f_indx]
+                elif(elapsed > 9 and elapsed < 11.9):
+                    self.arm_off=[.25, -1.05, 2.1, -.8,.15, -3.25,   0,0,0.38,0.15,0,0 ]
+                    actions.joint_positions[0:12] =  (actions.joint_positions[0:12] * 0) + self.arm_off
                     self._articulation_controller.apply_action(actions)
-                elif(elapsed > 11 and elapsed < 11.02):
-                    self.f_indx = 1
-                    self.arm_off[self.f_indx]= -0.1
-                    actions.joint_positions[self.f_indx] +=self.arm_off[self.f_indx]
-                    self._articulation_controller.apply_action(actions)
-                elif (elapsed > 14):
-                    self.z =False
+                elif (elapsed > 12):
+                    self.z = False
                     
 
         if self.handmode=='o' and self.pose_flag: #IK, end_effort
